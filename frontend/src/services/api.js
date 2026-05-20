@@ -1,12 +1,22 @@
+import { fetchAuthSession } from "aws-amplify/auth";
+
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
-const getToken = () => localStorage.getItem("token");
+const getHeaders = async (extra = {}) => {
+  let token = null;
+  try {
+    const session = await fetchAuthSession();
+    token = session.tokens?.idToken?.toString(); 
+  } catch (err) {
+    console.warn("No active session or failed to get token");
+  }
 
-const headers = (extra = {}) => ({
-  "Content-Type": "application/json",
-  ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
-  ...extra,
-});
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...extra,
+  };
+};
 
 const handleResponse = async (res) => {
   const data = await res.json();
@@ -14,44 +24,16 @@ const handleResponse = async (res) => {
   return data;
 };
 
-
-export const register = async (email, password) => {
-  const res = await fetch(`${BASE_URL}/auth/register`, {
-    method: "POST",
-    headers: headers(),
-    body: JSON.stringify({ email, password }),
-  });
-  return handleResponse(res);
-};
-
-export const login = async (email, password) => {
-  const res = await fetch(`${BASE_URL}/auth/login`, {
-    method: "POST",
-    headers: headers(),
-    body: JSON.stringify({ email, password }),
-  });
-  return handleResponse(res);
-};
-
-export const getMe = async () => {
-  const res = await fetch(`${BASE_URL}/auth/me`, {
-    headers: headers(),
-  });
-  return handleResponse(res);
-};
-
-
-
 export const getAllImages = async () => {
   const res = await fetch(`${BASE_URL}/images`, {
-    headers: headers(),
+    headers: await getHeaders(),
   });
   return handleResponse(res);
 };
 
 export const getImageById = async (id) => {
   const res = await fetch(`${BASE_URL}/images/${id}`, {
-    headers: headers(),
+    headers: await getHeaders(),
   });
   return handleResponse(res);
 };
@@ -61,15 +43,24 @@ export const uploadImage = async (title, file) => {
   formData.append("title", title);
   formData.append("image", file);
 
+  const headers = await getHeaders();
+  delete headers["Content-Type"]; 
+
   const res = await fetch(`${BASE_URL}/images/upload`, {
     method: "POST",
-    headers: {
-      ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
-    },
+    headers,
     body: formData,
   });
   return handleResponse(res);
 };
 
-export const getImageFileUrl = (filename) =>
-  `${BASE_URL}/images/file/${filename}`;
+const S3_BUCKET_URL = import.meta.env.VITE_S3_BUCKET_URL;
+
+export const getImageFileUrl = (filename) => {
+  if (!filename) return "";
+
+  if (filename.startsWith("http")) return filename; 
+
+  const key = filename.startsWith("uploads/") ? filename : `uploads/${filename}`;
+  return `${S3_BUCKET_URL}/${key}`;
+};

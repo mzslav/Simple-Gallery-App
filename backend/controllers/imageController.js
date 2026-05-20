@@ -1,7 +1,4 @@
-const path = require("path");
-const fs = require("fs");
 const ImageModel = require("../models/imageModel");
-const { UPLOAD_DIR } = require("../services/imageService");
 
 const getAllImages = async (req, res) => {
   try {
@@ -16,15 +13,10 @@ const getAllImages = async (req, res) => {
 const getImageById = async (req, res) => {
   try {
     const { id } = req.params;
-
-    if (isNaN(id)) {
-      return res.status(400).json({ error: "Invalid image ID" });
-    }
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid image ID" });
 
     const image = await ImageModel.findById(id);
-    if (!image) {
-      return res.status(404).json({ error: "Image not found" });
-    }
+    if (!image) return res.status(404).json({ error: "Image not found" });
 
     res.json({ image });
   } catch (err) {
@@ -40,55 +32,23 @@ const uploadImage = async (req, res) => {
     }
 
     const { title } = req.body;
-
-    if (!title) {
-      fs.unlink(req.file.path, () => {});
-      return res.status(400).json({ error: "Title is required" });
+    if (!title || title.trim().length < 3 || title.trim().length > 100) {
+      return res.status(400).json({ error: "Invalid title length" });
     }
 
-    const trimmedTitle = title.trim();
-    if (trimmedTitle.length < 3) {
-      fs.unlink(req.file.path, () => {});
-      return res.status(400).json({ error: "Title must be at least 3 characters" });
-    }
-
-    if (trimmedTitle.length > 100) {
-      fs.unlink(req.file.path, () => {});
-      return res.status(400).json({ error: "Title must not exceed 100 characters" });
-    }
-
-    const image = await ImageModel.create(trimmedTitle, req.file.filename, req.user.id);
+    // req.file.location містить публічний URL картинки на S3 (генерується multer-s3)
+    const imageUrl = req.file.location; 
+    
+    const image = await ImageModel.create(title.trim(), imageUrl, req.user.id);
 
     res.status(201).json({
       message: "Image uploaded successfully",
       image,
     });
   } catch (err) {
-    if (req.file) fs.unlink(req.file.path, () => {});
     console.error("UploadImage error:", err);
     res.status(500).json({ error: "Upload failed" });
   }
 };
 
-const serveFile = async (req, res) => {
-  try {
-    const { filename } = req.params;
-
-    if (filename.includes("/") || filename.includes("..")) {
-      return res.status(400).json({ error: "Invalid filename" });
-    }
-
-    const filePath = path.join(UPLOAD_DIR, filename);
-
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ error: "File not found" });
-    }
-
-    res.sendFile(filePath);
-  } catch (err) {
-    console.error("ServeFile error:", err);
-    res.status(500).json({ error: "Failed to serve file" });
-  }
-};
-
-module.exports = { getAllImages, getImageById, uploadImage, serveFile };
+module.exports = { getAllImages, getImageById, uploadImage };

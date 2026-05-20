@@ -1,13 +1,10 @@
 const express = require("express");
 const router = express.Router();
-const { getAllImages, getImageById, uploadImage, serveFile } = require("../controllers/imageController");
+const { getAllImages, getImageById, uploadImage } = require("../controllers/imageController");
 const authenticate = require("../middleware/auth");
 const { upload } = require("../services/imageService");
 
 router.get("/", getAllImages);
-
-router.get("/file/:filename", serveFile);
-
 router.get("/:id", getImageById);
 
 router.post(
