@@ -17,6 +17,25 @@ export default function ImageDetails() {
       .finally(() => setLoading(false));
   }, [id]);
 
+  const handleDownload = async (e) => {
+  e.preventDefault();
+  try {
+    const response = await fetch(fileUrl);
+    const blob = await response.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    link.download = image.filename.replace("uploads/", ""); 
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(blobUrl);
+  } catch (err) {
+    console.error("Download failed:", err);
+    alert("Failed to download image. CORS issue?");
+  }
+};
+
   if (loading) {
     return (
       <main className="details-page page-enter">
@@ -56,6 +75,7 @@ export default function ImageDetails() {
             <img
               src={fileUrl}
               alt={image.title}
+              crossOrigin="anonymous"
               className={`details-image ${imgLoaded ? "details-image--loaded" : ""}`}
               onLoad={() => setImgLoaded(true)}
             />
@@ -86,15 +106,9 @@ export default function ImageDetails() {
               </div>
             </dl>
 
-            <a
-              href={fileUrl}
-              download={image.filename}
-              className="details-download"
-              target="_blank"
-              rel="noreferrer"
-            >
-              ↓ Download image
-            </a>
+              <button onClick={handleDownload} className="details-download">
+                ↓ Download image
+              </button>
           </aside>
         </div>
       </div>

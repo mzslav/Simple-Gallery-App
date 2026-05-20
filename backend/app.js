@@ -1,28 +1,28 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const path = require("path");
+const morgan = require("morgan"); // Додали для CloudWatch логів
 
-const authRoutes = require("./routes/authRoutes");
 const imageRoutes = require("./routes/imageRoutes");
 
 const app = express();
 
 app.use(
   cors({
-    origin: function (origin, callback) {
-      callback(null, origin || true);
-    },
+    origin: process.env.FRONTEND_URL || "*",
     credentials: true,
   })
 );
+
 app.use(express.json());
 
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+// Логування всіх запитів (дуже корисно для AWS CloudWatch)
+app.use(morgan("combined"));
 
-app.use("/auth", authRoutes);
+// РОУТИ
 app.use("/images", imageRoutes);
 
+// Healthcheck для AWS Elastic Beanstalk (щоб знати, що сервак живий)
 app.get("/health", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });

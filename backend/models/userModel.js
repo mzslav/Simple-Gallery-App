@@ -1,26 +1,18 @@
 const pool = require("../db/pool");
 
 const UserModel = {
-  async findByEmail(email) {
+  async findByCognitoSub(sub) {
     const result = await pool.query(
-      "SELECT * FROM users WHERE email = $1",
-      [email]
+      "SELECT * FROM users WHERE cognito_sub = $1",
+      [sub]
     );
     return result.rows[0] || null;
   },
 
-  async findById(id) {
+  async create(cognitoSub, email) {
     const result = await pool.query(
-      "SELECT id, email, created_at FROM users WHERE id = $1",
-      [id]
-    );
-    return result.rows[0] || null;
-  },
-
-  async create(email, hashedPassword) {
-    const result = await pool.query(
-      "INSERT INTO users (email, password) VALUES ($1, $2) RETURNING id, email, created_at",
-      [email, hashedPassword]
+      "INSERT INTO users (cognito_sub, email) VALUES ($1, $2) RETURNING id, email, created_at",
+      [cognitoSub, email]
     );
     return result.rows[0];
   },

@@ -19,6 +19,7 @@ export default function ImageCard({ image }) {
           <img
             src={getImageFileUrl(image.filename)}
             alt={image.title}
+            crossOrigin="anonymous"
             className={`image-card__img ${loaded ? "image-card__img--loaded" : ""}`}
             onLoad={() => setLoaded(true)}
             onError={() => setError(true)}
